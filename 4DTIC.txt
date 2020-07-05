@@ -1,0 +1,574 @@
+Program FourDimensionalTicTacToePrg;
+{Copyright 1994, Jacob Walker}
+{This software is distributed as TradeWare}
+{Please read the readme.txt file for licensing info}
+
+  Uses
+    Crt;
+
+
+  Type
+    DimArray = Array[1..42,1..4] of 1..3;
+
+    PlayerRecord = Record
+      Dim: DimArray;
+      LastPoint:0..42;
+      Control:-1..3;
+    End;
+
+    PlayerArray = Array['O'..'X'] of PlayerRecord;
+
+    WinPtSet = Set of 1..42;
+
+
+  Var
+    Player:PlayerArray;
+    Turn:Char;
+
+    TempString:string;
+    TempInt:Integer;
+    TempChar:Char;
+    Count:integer;
+
+    ConvError:integer;
+
+    WinPts:WinPtSet;
+    WhoWon:Char;
+    Done:Boolean;
+
+
+  Function Change(var turn:char):char;
+  {Changes the Turn}
+
+    Begin
+      Case Turn of
+        'X':Change := 'O';
+        'O':Change := 'X';
+      end;
+    End;
+
+  Procedure Init;
+  {Initializes the game}
+
+    Begin
+      {Sets Initial Variables}
+      ClrScr;
+      Randomize;
+      Player['X'].LastPoint := 0;
+      Player['O'].LastPoint := 0;
+
+      {Writes Title}
+      Textcolor(Blink+LightBlue);
+      GotoXY(32,4);
+      Write('4-d Tic Tac Toe');
+      Textcolor(Yellow);
+      GotoXY(28,6);
+      Write('Written By Jacob Walker');
+
+      {Get's X's Information}
+      Textcolor(White);
+      Repeat
+        GotoXy(1,20);
+        Write('Enter X''s skill level (0 to 3, 0 is human): ');
+        tempchar := Readkey;
+        Write(TempChar);
+        val(TempChar,tempint,ConvError);
+      Until ((tempint >= 0) and (tempint <=3 ) and (ConvError=0));
+      Player['X'].Control := tempint;
+
+      {Get's O's Information}
+      Repeat
+        GotoXy(1,21);
+        Write('Enter O''s skill level (0 to 3, 0 is human): ');
+        tempchar := Readkey;
+        Write(TempChar);
+        val(tempchar,tempint,ConvError);
+      Until ((tempint >= 0) and (tempint <= 3) and (ConvError=0));
+      Player['O'].control := tempint;
+
+      {Decides Who should go first}
+      GotoXy(1,22);
+      Write('Who should go first: ');
+      TempChar := Readkey;
+      Write(TempChar);
+      Case TempChar of
+        'X','x': turn := 'X';
+        'O','o': turn := 'O';
+      else
+        Case odd(Random(4269)) of
+          True:turn := 'X';
+          False:turn := 'O';
+        end;
+      end;
+      Turn := Change(turn);
+  End;
+
+
+  Procedure DrawDim(who:char;pos:integer);
+  {Places the cursor at the coresponding screen cordinate}
+    Begin
+      With Player[who] do
+        GotoXY(12*Dim[pos,1]+3*Dim[pos,3]-12,6*Dim[pos,2]+2*Dim[pos,4]-7);
+    End;
+
+
+  Procedure WriteBoard;
+  {Writes the board to the screen}
+
+    Procedure WriteBackBoard;
+    {Writes the board without symbols to the screen}
+
+      Var
+        Count1,Count2,StartX,Starty:integer;
+
+      Begin
+        For Count1 := 1 to 3 do
+          For Count2 := 1 to 3 do
+            Begin
+              Textcolor(LightGreen);
+              Startx := 12*count1-11;
+              Starty := 6*count2-5;
+              Gotoxy(startx,starty);
+              Write('   ³   ³    ');
+              Gotoxy(startx,starty+1);
+              Write('ÄÄÄÅÄÄÄÅÄÄÄ ');
+              Gotoxy(startx,starty+2);
+              Write('   ³   ³    ');
+              Gotoxy(startx,starty+3);
+              Write('ÄÄÄÅÄÄÄÅÄÄÄ ');
+              Gotoxy(startx,starty+4);
+              Write('   ³   ³    ');
+           End;
+      End;
+
+    Procedure WritePositions;
+    {Writes Symbols to the screen}
+
+      Var
+        Count,Players:Integer;
+        Who:'O'..'X';
+
+      Begin
+        For Players := 1 to 2 do
+          Begin
+            Case Players of
+              1:Who := 'X';
+              2:Who := 'O';
+          end;
+        With Player[who] do
+          For Count := 1 to LastPoint do
+            Begin
+              Drawdim(who,count);
+              Case Who of
+                'X':Textcolor(LightBlue);
+                'O':Textcolor(LightRed);
+              End;
+              If ((Count in WinPts) and (WhoWon = Who)) then
+                Case WhoWon of
+                  'X':Textcolor(Blink+LightBlue);
+                  'O':Textcolor(Blink+LightRed);
+                end;
+              Write(who);
+            End;
+        End;
+      End;
+
+    Begin
+      Clrscr;
+      WriteBackBoard;
+      WritePositions;
+    End;
+
+
+  Function Win(who:char):Boolean;
+  {Sees if someone won}
+
+    Var
+      Point:Array[1..3] of integer;
+      across:1..4;
+      Count:1..3;
+      TempWin:Boolean;
+
+    Function AllSame:Boolean;
+
+        Begin
+	  AllSame := False;
+	  With Player[who] do
+	    If ((Dim[Point[1],across] = Dim[Point[2],across]) and
+	       (Dim[Point[2],across] = Dim[Point[3],across])) then
+	         AllSame := True;
+	End;
+
+      Function Up:Boolean;
+
+        Begin
+	  Up := False;
+	  With Player[who] do
+	  If ((Dim[Point[1],across] = 1) and
+	     (Dim[Point[2],across] = 2) and
+	     (Dim[Point[3],across] = 3)) then
+	       Up := True;
+	End;
+
+      Function Down:Boolean;
+
+        Begin
+	  Down := False;
+	  With Player[who] do
+	    If ((Dim[Point[1],across] = 3) and
+	       (Dim[Point[2],across] = 2) and
+	       (Dim[Point[3],across] = 1)) then
+	         Down := True;
+	End;
+
+      Function Repeated:Boolean;
+
+        Begin
+          Repeated := False;
+	  If ((Point[1] = Point[2]) or
+	     (Point[1] = Point[3]) or
+	     (Point[2] = Point[3])) then
+	       Repeated := True;
+	End;
+
+      Begin
+        TempWin := False;
+	WinPts := [];
+	With Player[who] do
+	  For Point[1] := 1 to LastPoint do
+	    For Point[2] := 1 to LastPoint do
+	      For Point[3] := 1 to LastPoint do
+	        If Not(Repeated) then
+	          Begin
+		    TempWin := True;
+		    For across := 1 to 4 do
+		      If not((AllSame) or (Up) or (Down)) then
+		        TempWin := False;
+		      If TempWin = True then
+		        For Count := 1 to 3 do
+		          Begin
+		            WinPts := WinPts + [Point[count]];
+		            Point[count] := LastPoint;
+                          End;
+                  End;
+          Win := TempWin;
+      End;
+
+
+  Function PutOk(who:char;where:integer):boolean;
+
+    var
+     BoardPlace:1..4;
+     ListPlace:1..42;
+     Temp:Boolean;
+		 Check:0..4;
+
+    Begin
+      Temp:= True;
+
+      For BoardPlace := 1 to 4 do
+        If not(Player[who].dim[where,BoardPlace] in [1..3]) then
+          Temp := False;
+
+      For ListPlace := 1 to Player[change(who)].LastPoint do
+				Begin
+          Check := 0;
+          For BoardPlace := 1 to 4 do
+            If Player[who].dim[where,Boardplace] =
+               Player[change(who)].dim[ListPlace,BoardPlace] then
+                 Check := Check + 1;
+          If Check >= 4 then
+            Temp := False;
+        End;
+
+      For ListPlace := 1 to Player[who].Lastpoint do
+        If Not(listplace = where) then
+          Begin
+            Check := 0;
+            For BoardPlace := 1 to 4 do
+              If Player[who].dim[where,boardplace] =
+                 Player[who].dim[ListPlace,Boardplace] then
+                   Check  := check + 1;
+            If Check >= 4 then
+							Temp := False;
+          End;
+
+      PutOk := Temp;
+    End;
+
+
+  Procedure ChoosePosition(turn:char);
+  {Input to the board}
+
+    Procedure Human;
+    {Allows player to input position}
+
+      Procedure MoveUp;
+
+        Begin
+          With Player[turn] do
+            If not((Dim[lastpoint,2]=1) and (Dim[lastpoint,4]=1)) then
+              If Dim[lastpoint,4]=1 then
+	        Begin
+		  Dim[lastpoint,4]:=3;
+		  Dim[lastpoint,2]:=Dim[lastpoint,2]-1;
+		End
+	      else
+	        Dim[lastpoint,4]:=Dim[lastpoint,4]-1;
+	End;
+
+      Procedure MoveDown;
+
+        Begin
+	  With Player[turn] do
+	    If not((Dim[lastpoint,2]=3) and (Dim[lastpoint,4]=3)) then
+	      If Dim[lastpoint,4]=3 then
+	        Begin
+		  Dim[lastpoint,4]:=1;
+		  Dim[lastpoint,2]:=Dim[lastpoint,2]+1;
+		End
+	      else
+	        Dim[lastpoint,4]:=Dim[lastpoint,4]+1;
+	End;
+
+      Procedure MoveLeft;
+
+        Begin
+	  With Player[turn] do
+	    If not((Dim[lastpoint,1]=1) and (Dim[lastpoint,3]=1)) then
+	      If Dim[lastpoint,3]=1 then
+	        Begin
+		  Dim[lastpoint,3]:=3;
+		  Dim[lastpoint,1]:=Dim[lastpoint,1]-1;
+		End
+	      else
+	        Dim[lastpoint,3]:=Dim[lastpoint,3]-1;
+	End;
+
+
+      Procedure MoveRight;
+
+        Begin
+	  With Player[turn] do
+	    If not((Dim[lastpoint,1]=3) and (Dim[lastpoint,3]=3)) then
+	      If Dim[lastpoint,3]=3 then
+	        Begin
+		  Dim[lastpoint,3]:=1;
+		  Dim[lastpoint,1]:=Dim[lastpoint,1]+1;
+		End
+	      else
+	        Dim[lastpoint,3]:=Dim[lastpoint,3]+1;
+	End;
+
+
+      {Procedure MoveHelp;}
+
+      Var
+        Input:char;
+        count:1..4;
+        Action:char;
+        Continue:Boolean;
+
+      Begin
+        With Player[turn] do
+	  Begin
+	    GotoXY(1,20);
+	    Case Turn of
+	      'X':Textcolor(LightBlue);
+	      'O':Textcolor(LightRed);
+	    End;
+	    Write(turn,'''s turn');
+	    LastPoint := LastPoint + 1;
+	    For count := 1 to 4 do
+	      Dim[lastpoint,count] := 2;
+	    Continue := False;
+	    Repeat
+	      DrawDim(turn,lastpoint);
+	      Action := Readkey;
+	      Case Action of
+	        'Q','q':
+                  Halt;
+		{'H','h','?':
+		  MoveHelp;}
+		'7':
+		  Begin
+		    MoveUp;
+		    MoveLeft;
+		  End;
+		'8','K','k','N','n':
+		  MoveUp;
+		'9':
+		  Begin
+		    MoveUp;
+		    MoveRight;
+		  End;
+		'4','H','h','W','w':
+		  MoveLeft;
+		'5',char(13),char(32):
+		  If PutOk(turn,lastpoint) then
+		    Continue := True;
+		'6','L','l','E','e':
+		  MoveRight;
+		'1':
+		  Begin
+		    MoveLeft;
+		    MoveDown;
+		  End;
+		'2','J','j','S','s':
+		  MoveDown;
+		'3':
+		  Begin
+		    MoveDown;
+		    MoveRight;
+		  End;
+	      End;
+	    Until Continue;
+	End;
+      End;
+
+
+    Procedure Computer(skill:integer);
+
+      Var
+	Other,Me:Char;
+
+      Procedure CanIWin; {Sees If Computer Can Win}
+
+        Var
+          Cord:Array[1..4] of 1..3;
+
+        Begin
+          With Player[turn] do
+	    Begin
+	      For Cord[1] := 1 to 3 do
+	        For Cord[2] := 1 to 3 do
+		  For Cord[3] := 1 to 3 do
+		    For Cord[4] := 1 to 3 do
+		      Begin
+		        For Count := 1 to 4 do
+			  Dim[Lastpoint,count] := Cord[count];
+			If ((PutOk(turn,LastPoint)) and (Win(turn))) then
+		          Begin
+			    Done := True;
+			    For count := 1 to 4 do
+			      Cord[count] := 3;
+			  End;
+		      End;
+	    End;
+        End;
+
+      Procedure CanOpWin; {Sees If Opponent can Win}
+
+        Var
+          Cord:Array[1..4] of 1..3;
+
+        Begin
+          Other := Change(turn);
+	    Me := Turn;
+	    Player[other].LastPoint := Player[other].lastpoint + 1;
+	    Player[me].Lastpoint := Player[me].lastpoint - 1;
+	    For Cord[1] := 1 to 3 do
+	      For Cord[2] := 1 to 3 do
+	        For Cord[3] := 1 to 3 do
+		  For Cord[4] := 1 to 3 do
+		    Begin
+		      With Player[other] do
+		        For Count := 1 to 4 do
+			  Dim[lastpoint,count] := Cord[Count];
+		      If ((PutOk(other,player[other].lastpoint))
+		         and (Win(other))) then
+			   Begin
+			     With Player[me] do
+			       Begin
+			         Done := True;
+				 Lastpoint := Lastpoint + 1;
+				 For Count := 1 to 4 do
+				   Dim[lastpoint,count] := Cord[count];
+			       End;
+			     For Count := 1 to 4 do
+			       Cord[count] := 3;
+			   End;
+		    End;
+		    Player[other].Lastpoint := Player[other].lastpoint - 1;
+		    If Not(Done) then
+	            Player[me].lastpoint := player[me].lastpoint + 1;
+	End;
+
+      Procedure RandomPlacement;
+
+        Begin
+          With Player[turn] do
+	    Begin
+              Repeat
+                For Count := 1 to 4 do
+                  Dim[lastpoint,count] := (random(1000) mod 3) +1
+              Until PutOk(turn,lastpoint);
+            End;
+        End;
+
+
+      Begin
+        Done := False;
+	With Player[turn] do
+	  LastPoint := LastPoint + 1;
+        If ((not(done)) and (skill >=2)) then
+          CanIWin;
+        If ((not(done)) and (skill >=3)) then
+          CanOpWin;
+        {If ((not(done)) and (skill >=4)) then
+          NextToOther;
+        If ((not(done)) and (skill >=5)) then
+          MostPossible;
+        If ((not(done)) and (skill >=6)) then
+          NextToandMostPossible;}
+        if Not(done) then
+          RandomPlacement;
+      End;
+
+    Begin
+      Case Player[turn].Control of
+        0:Human;
+        1..10:Computer(Player[turn].Control);
+      end;
+    End;
+
+
+  Procedure WinGame;
+
+    var
+      TempChar:Char;
+
+    Begin
+      WhoWon := Turn;
+      WriteBoard;
+      GotoXY(1,20);
+      Case WhoWon of
+        'X':Textcolor(LightBlue);
+        'O':Textcolor(LightRed);
+      end;
+      Write(WhoWon,'''s Won!!!!!');
+      Repeat
+        GotoXY(1,21);
+        Textcolor(White);
+        Write('Play Again? ');
+        TempChar := Readkey;
+      Until TempChar in ['Y','y','n','N'];
+      Case TempChar of
+        'Y','y':Done := False;
+        'N','n':Done := True;
+      end;
+      WhoWon := ' ';
+    End;
+
+
+  Begin
+    Repeat
+      Init;
+      Repeat
+        Turn := Change(turn);
+        WriteBoard;
+        ChoosePosition(turn);
+      Until Win(turn);
+      WinGame;
+    Until Done;
+  End.
